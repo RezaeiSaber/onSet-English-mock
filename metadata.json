@@ -1,0 +1,5 @@
+{
+  "name": "Cloze Test Simulator",
+  "description": "An application that mimics the onSET English test format. It processes .txt files to create interactive Cloze tests with timed challenges, answer checking, and score summaries.",
+  "requestFramePermissions": []
+}
