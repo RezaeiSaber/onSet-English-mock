@@ -16,7 +16,6 @@ const SetupScreen: React.FC<SetupScreenProps> = ({ onStartTest, settings, onSett
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Pre-load the default file content if it's available and no file has been chosen yet.
     if (defaultFileContent && !fileContent) {
       setFileContent(defaultFileContent);
       setFileName('example.txt');

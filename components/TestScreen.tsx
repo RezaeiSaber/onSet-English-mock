@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { ClozeTest, ClozeSegment, ClozeBlank } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ClozeTest, ClozeSegment } from '../types';
 import Timer from './Timer';
 import { CheckCircleIcon, XCircleIcon, EyeIcon } from './icons';
 
@@ -37,7 +36,6 @@ const TestScreen: React.FC<TestScreenProps> = ({ test, testIndex, totalTests, is
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isReviewMode, onNext]);
 
-
   const renderSegment = (segment: ClozeSegment, segmentIndex: number) => {
     if (segment.type === 'word') {
       return <span key={segmentIndex} className="inline">{segment.content} </span>;
@@ -45,6 +43,11 @@ const TestScreen: React.FC<TestScreenProps> = ({ test, testIndex, totalTests, is
     
     const blank = segment;
     const inputId = `blank-${blank.id}-${segmentIndex}`;
+    
+    const hint = blank.hint;
+    const prefixMatch = hint.match(/^([a-zA-Z]+)(_+)$/);
+    const prefix = prefixMatch ? prefixMatch[1] : '';
+    const underscoreCount = prefixMatch ? prefixMatch[2].length : hint.length;
     
     let borderColor = 'border-slate-300 dark:border-slate-600 focus:border-primary-500 focus:ring-primary-500';
     let icon = null;
@@ -60,26 +63,39 @@ const TestScreen: React.FC<TestScreenProps> = ({ test, testIndex, totalTests, is
     }
 
     return (
-      <div key={segmentIndex} className="inline-block align-bottom mx-1 my-1">
-        <div className="relative">
+      <span key={segmentIndex} className="inline-flex items-baseline mx-1 my-1 relative">
+        {prefix && (
+          <span className="text-slate-900 dark:text-slate-200 font-medium">{prefix}</span>
+        )}
+        <div className="relative inline-block">
           <input
             id={inputId}
             type="text"
             value={blank.userAnswer}
-            placeholder={blank.hint}
+            placeholder={'_'.repeat(underscoreCount)}
             onChange={(e) => handleAnswerChange(blank.id, e.target.value)}
             disabled={isReviewMode}
-            className={`bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-md shadow-sm p-2 text-center w-40 sm:w-48 transition-colors ${borderColor} border-2 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:cursor-default`}
+            style={{ 
+              width: `${Math.min(Math.max(3, blank.userAnswer.length * 0.85+0.7 ), 5)}em`,
+              minWidth: '3em',
+              maxWidth: '12em'
+            }}
+            className={`bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-md shadow-sm p-2 px-3 text-left transition-all duration-200 ${borderColor} border-2 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:cursor-default`}
             autoCapitalize="none"
             autoComplete="off"
             autoCorrect="off"
           />
           {isReviewMode && icon}
         </div>
-        {isReviewMode && showAnswers && !blank.isCorrect && (
-          <div className="text-center text-green-600 dark:text-green-400 text-sm font-semibold mt-1">{blank.original}</div>
+        {(blank as any).punctuation && (
+          <span className="text-slate-900 dark:text-slate-200">{(blank as any).punctuation}</span>
         )}
-      </div>
+        {isReviewMode && showAnswers && !blank.isCorrect && (
+          <div className="absolute top-full left-0 text-center text-green-600 dark:text-green-400 text-sm font-semibold mt-1 bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-lg z-10">
+            {blank.original}
+          </div>
+        )}
+      </span>
     );
   };
   

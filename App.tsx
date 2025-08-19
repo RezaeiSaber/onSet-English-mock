@@ -20,8 +20,24 @@ const App: React.FC = () => {
   });
   const [defaultFileContent, setDefaultFileContent] = useState<string>('');
 
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const maxLength = Math.max(str1.length, str2.length);
+    if (maxLength === 0) return 1;
+    
+    let matches = 0;
+    const minLength = Math.min(str1.length, str2.length);
+    
+    for (let i = 0; i < minLength; i++) {
+      if (str1[i] === str2[i]) {
+        matches++;
+      }
+    }
+    
+    return matches / maxLength;
+  };
+
   useEffect(() => {
-    fetch('/example.txt')
+    fetch('./example.txt')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -107,7 +123,45 @@ const App: React.FC = () => {
           sentence.map(segment => {
             if (segment.type === 'blank') {
               totalBlanks++;
-              const isCorrect = segment.userAnswer.trim().toLowerCase() === segment.original.toLowerCase();
+              
+              const userAnswer = segment.userAnswer.trim().toLowerCase();
+              const originalWord = segment.original.toLowerCase();
+              
+              const hint = segment.hint || '';
+              const visiblePart = hint.split('_')[0] || '';
+              const hiddenPart = originalWord.substring(visiblePart.length);
+              
+              let isCorrect = userAnswer === hiddenPart;
+              
+              if (!isCorrect && userAnswer.length > 0) {
+                const commonVariations = [
+                  hiddenPart,
+                  hiddenPart + 's',
+                  hiddenPart + 'es',
+                  hiddenPart.endsWith('s') ? hiddenPart.slice(0, -1) : hiddenPart,
+                  hiddenPart.endsWith('es') ? hiddenPart.slice(0, -2) : hiddenPart,
+                  hiddenPart + 'ing',
+                  hiddenPart + 'ed',
+                  hiddenPart + 'd',
+                  hiddenPart.endsWith('e') ? hiddenPart.slice(0, -1) + 'ing' : hiddenPart,
+                  hiddenPart.replace('ise', 'ize'),
+                  hiddenPart.replace('ize', 'ise'),
+                  hiddenPart.replace('our', 'or'),
+                  hiddenPart.replace('or', 'our'),
+                ];
+                
+                isCorrect = commonVariations.some(variant => 
+                  variant === userAnswer && variant.length > 0
+                );
+                
+                if (!isCorrect && userAnswer.length > 1 && hiddenPart.length > 1) {
+                  const similarity = calculateSimilarity(userAnswer, hiddenPart);
+                  if (similarity >= 0.85 && Math.abs(userAnswer.length - hiddenPart.length) <= 1) {
+                    isCorrect = true;
+                  }
+                }
+              }
+              
               if (isCorrect) {
                 correctCount++;
               } else {

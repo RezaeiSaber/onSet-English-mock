@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface TimerProps {
-  initialTime: number; // in seconds
+  initialTime: number;
   onTimeUp: () => void;
   isPaused: boolean;
   onTick: (newTime: number) => void;
@@ -34,7 +34,6 @@ const Timer: React.FC<TimerProps> = ({ initialTime, onTimeUp, isPaused, onTick }
     }, 1000);
 
     return () => clearInterval(timerId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPaused, onTimeUp]);
 
   const minutes = Math.floor(time / 60);

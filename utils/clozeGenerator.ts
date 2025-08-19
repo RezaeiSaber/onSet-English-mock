@@ -1,27 +1,42 @@
 
 import { ClozeTest, ClozeSegment, ClozeWord, ClozeBlank } from '../types';
-import { STOP_WORDS, TEST_DURATION_MINUTES } from '../constants';
+import { TEST_DURATION_MINUTES } from '../constants';
 
-// A simple sentence splitter. It's not perfect but works for many cases.
 const splitIntoSentences = (text: string): string[] => {
-  return text.match(/[^.!?]+[.!?]+/g) || [text];
+  const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+  return sentences.length > 0 ? sentences : [text];
 };
 
 const createHint = (word: string): string => {
   const len = word.length;
-  let prefixLength = 0;
-  if (len >= 7) {
-    prefixLength = 3;
-  } else if (len >= 5) {
-    prefixLength = 2;
-  } else if (len >= 4) {
+  
+  let prefixLength: number;
+  
+  if (len <= 3) {
     prefixLength = 1;
+  } else if (len <= 5) {
+    prefixLength = 2;
+  } else if (len <= 7) {
+    prefixLength = 3;
   } else {
-    return '___';
+    prefixLength = 4;
   }
+  
   const prefix = word.substring(0, prefixLength);
   const underline = '_'.repeat(len - prefixLength);
   return `${prefix}${underline}`;
+};
+
+const isWordEligible = (word: string, wordIndex: number, isFirstSentence: boolean, isLastSentence: boolean): boolean => {
+  const cleanedWord = word.replace(/[.,!?;:"'()-]+$/, '');
+  const cleanLower = cleanedWord.toLowerCase();
+  
+  return !isFirstSentence && 
+         !isLastSentence && 
+         wordIndex > 0 && 
+         cleanedWord.length >= 2 && 
+         /^[a-zA-Z]+$/.test(cleanedWord) && 
+         !(cleanLower === 'a' || cleanLower === 'i' || cleanLower === 'is' || cleanLower === 'be' || cleanLower === 'to');
 };
 
 export const createClozeTest = (text: string, id: number): ClozeTest => {
@@ -30,23 +45,34 @@ export const createClozeTest = (text: string, id: number): ClozeTest => {
     return { id, originalText: text, sentences: [], timeRemaining: TEST_DURATION_MINUTES * 60 };
   }
 
-  let wordToBlankCounter = 0;
   let blankIdCounter = 0;
+  const TARGET_BLANKS = 20;
 
   const processedSentences = sentencesRaw.map((sentenceStr, sentenceIndex) => {
-    const isFirstOrLastSentence = sentenceIndex === 0 || sentenceIndex === sentencesRaw.length - 1;
+    const isFirstSentence = sentenceIndex === 0;
+    const isLastSentence = sentenceIndex === sentencesRaw.length - 1;
     const words = sentenceStr.trim().split(/\s+/);
     
-    const sentenceSegments: ClozeSegment[] = words.map((word) => {
-      const cleanedWord = word.replace(/[.,!?;:"]+$/, '');
+    const sentenceSegments: ClozeSegment[] = words.map((word, wordIndex) => {
+      const cleanedWord = word.replace(/[.,!?;:"'()-]+$/, '');
       const punctuation = word.substring(cleanedWord.length);
 
-      if (isFirstOrLastSentence || STOP_WORDS.has(cleanedWord.toLowerCase()) || cleanedWord.length < 4) {
-        return { type: 'word', content: word } as ClozeWord;
+      let shouldBlank = false;
+      
+      if (isWordEligible(word, wordIndex, isFirstSentence, isLastSentence)) {
+        let eligibleWordsBefore = 0;
+        for (let i = 0; i < wordIndex; i++) {
+          if (isWordEligible(words[i], i, isFirstSentence, isLastSentence)) {
+            eligibleWordsBefore++;
+          }
+        }
+        
+        if (eligibleWordsBefore % 2 === 0) {
+          shouldBlank = true;
+        }
       }
 
-      wordToBlankCounter++;
-      if (wordToBlankCounter % 2 === 0) {
+      if (shouldBlank && blankIdCounter < TARGET_BLANKS) {
         blankIdCounter++;
         return {
           id: `${id}-${blankIdCounter}`,
@@ -74,6 +100,5 @@ export const createClozeTest = (text: string, id: number): ClozeTest => {
 
 export const parseTextFile = (fileContent: string): string[] => {
     if (!fileContent) return [];
-    // Split by ###, remove empty strings from result
     return fileContent.split(/\n?###\n?/).filter(text => text.trim().length > 0);
 };
