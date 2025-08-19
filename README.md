@@ -6,7 +6,7 @@
 
 ## ✨ Why I Built This
 
-Hey! I'm a student who was preparing for the **onSET English language test** — a standardized test required for many German scholarships, universities, and exchange programs.
+Hey! I'm a student who was preparing for the **onSET-English language test** — a standardized test you can use for German scholarships, universities, and exchange programs.
 
 While studying, I realized something frustrating:
 
